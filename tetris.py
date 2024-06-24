@@ -2,17 +2,17 @@ import pygame
 import random
 
 # Default dimensions of the game window
-scr_width = 800
-scr_height = 700
+SCR_WIDTH = 800
+SCR_HEIGHT = 700
 # Dimensions of the tetris grid
-play_width = 300
-play_height = 600
+PLAY_WIDTH = 300
+PLAY_HEIGHT = 600
 
 # X, Y coordinates of the top left corner of the game window
-top_left_x = (scr_width - play_width) // 2
-top_left_y = scr_height - play_height
+TL_X = (SCR_WIDTH - PLAY_WIDTH) // 2
+TL_Y = SCR_HEIGHT - PLAY_HEIGHT - 10
 # Size of a single tile
-block_size = 30
+BLOCK_SIZE = 30
 
 # Tetris pieces represented as lists of 2D arrays with rotations
 S = [['.....',
@@ -167,6 +167,58 @@ def main():
     Main entry point of the program.
     """
     pygame.font.init()
+
+    win = pygame.display.set_mode((SCR_WIDTH, SCR_HEIGHT))
+    pygame.display.set_caption("Tetris")
+    game_loop(win)
+
+def create_grid():
+    grid = [[(0,0,0) for x in range(10)] for x in range(20)]
+    return grid
+
+def draw_grid(surface, grid):
+    for row in range(len(grid)):
+        pygame.draw.line(surface, (32,32,32), 
+                         (TL_X, TL_Y + row * BLOCK_SIZE),
+                         (TL_X + PLAY_WIDTH, TL_Y + row * BLOCK_SIZE))
+        for col in range(len(grid[row])):
+            pygame.draw.line(surface, (32,32,32), 
+                             (TL_X + col * BLOCK_SIZE, TL_Y), 
+                             (TL_X + col * BLOCK_SIZE, TL_Y + PLAY_HEIGHT))
+
+def draw_window(surface, grid):
+    surface.fill((0,0,0))
+
+    font = pygame.font.SysFont("Georgia", 60)
+    label = font.render("TETRIS", True, (255,255,255))
+
+    surface.blit(label, (TL_X + PLAY_WIDTH / 2 - (label.get_width() / 2), 20))
+
+    for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            pygame.draw.rect(surface, grid[row][col], 
+                             (TL_X + col * BLOCK_SIZE,
+                              TL_Y + row * BLOCK_SIZE,
+                              BLOCK_SIZE, BLOCK_SIZE))
+    draw_grid(surface, grid)
+    pygame.draw.rect(surface, (128,128,128), (TL_X - 5, TL_Y - 5, 
+                                              PLAY_WIDTH + 10, 
+                                              PLAY_HEIGHT + 10), 5)
+
+def game_loop(win):
+    run = True
+    while run:  
+        grid = create_grid()
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                pygame.display.quit()
+
+        draw_window(win, grid)
+        pygame.display.update()
+
+    pygame.quit()
 
 if __name__ == "__main__":
     main()
