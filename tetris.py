@@ -8,11 +8,13 @@ SCR_HEIGHT = 700
 PLAY_WIDTH = 300
 PLAY_HEIGHT = 600
 
-# X, Y coordinates of the top left corner of the game window
+# X, Y coordinates of the top left corner of the grid
 TL_X = (SCR_WIDTH - PLAY_WIDTH) // 2
 TL_Y = SCR_HEIGHT - PLAY_HEIGHT - 10
 # Size of a single tile
 BLOCK_SIZE = 30
+
+FPS = 60
 
 # Tetris pieces represented as lists of 2D arrays with rotations
 S = [['.....',
@@ -153,14 +155,20 @@ class Piece:
         self.colour = shape_colours[shapes.index(shape)]
         self.rotation = 0
 
-    def rotate(self):
+    def rotate_cw(self):
         self.rotation = (self.rotation + 1) % len(self.shape)
+
+    def rotate_ccw(self):
+        self.rotation = (self.rotation - 1) % len(self.shape)
 
     def move_rgt(self):
         self.x += 1
     
     def move_lft(self):
         self.x -= 1
+    
+    def move_down(self):
+        self.y + 1
 
 def main():
     """
@@ -172,11 +180,25 @@ def main():
     pygame.display.set_caption("Tetris")
     game_loop(win)
 
-def create_grid():
+def create_grid(locked={}):
     grid = [[(0,0,0) for x in range(10)] for x in range(20)]
+
+    for row in range(len(grid)):
+        for col in range(len(grid[0])):
+            if (col, row) in locked:
+                c = locked[(col, row)]
+                grid[row][col] = c
+
     return grid
 
 def draw_grid(surface, grid):
+    for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            pygame.draw.rect(surface, grid[row][col], 
+                             (TL_X + col * BLOCK_SIZE,
+                              TL_Y + row * BLOCK_SIZE,
+                              BLOCK_SIZE, BLOCK_SIZE))
+    
     for row in range(len(grid)):
         pygame.draw.line(surface, (32,32,32), 
                          (TL_X, TL_Y + row * BLOCK_SIZE),
@@ -185,6 +207,10 @@ def draw_grid(surface, grid):
             pygame.draw.line(surface, (32,32,32), 
                              (TL_X + col * BLOCK_SIZE, TL_Y), 
                              (TL_X + col * BLOCK_SIZE, TL_Y + PLAY_HEIGHT))
+            
+    pygame.draw.rect(surface, (128,128,128), (TL_X - 5, TL_Y - 5, 
+                                              PLAY_WIDTH + 10, 
+                                              PLAY_HEIGHT + 10), 5)
 
 def draw_window(surface, grid):
     surface.fill((0,0,0))
@@ -193,30 +219,51 @@ def draw_window(surface, grid):
     label = font.render("TETRIS", True, (255,255,255))
 
     surface.blit(label, (TL_X + PLAY_WIDTH / 2 - (label.get_width() / 2), 20))
-
-    for row in range(len(grid)):
-        for col in range(len(grid[row])):
-            pygame.draw.rect(surface, grid[row][col], 
-                             (TL_X + col * BLOCK_SIZE,
-                              TL_Y + row * BLOCK_SIZE,
-                              BLOCK_SIZE, BLOCK_SIZE))
+    
     draw_grid(surface, grid)
-    pygame.draw.rect(surface, (128,128,128), (TL_X - 5, TL_Y - 5, 
-                                              PLAY_WIDTH + 10, 
-                                              PLAY_HEIGHT + 10), 5)
+    pygame.display.update()
+
+def get_shape():
+    shape_index = random.randint(0, len(shapes))
+    shape = Piece(5, -1, shapes[shape])
+    return shape
 
 def game_loop(win):
     run = True
-    while run:  
-        grid = create_grid()
+    global grid
 
+    locked = {}
+    grid = create_grid(locked)
+
+    clock = pygame.time.Clock()
+    piece_queue = [get_shape() for x in range(5)]
+
+    curr_piece = get_shape()
+
+    while run:
+        clock.tick(FPS)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.display.quit()
 
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    curr_piece.move_lft()
+                if event.key == pygame.K_RIGHT:
+                    curr_piece.move_rgt()
+                if event.key == pygame.K_DOWN:
+                    curr_piece.move_down()
+                if event.key == pygame.K_UP:
+                    curr_piece.rotate_cw()
+                if event.key == pygame.K_z:
+                    curr_piece.rotate_ccw()
+                if event.key == pygame.K_c:
+                    pass
+                if event.key == pygame.K_SPACE:
+                    pass
+
         draw_window(win, grid)
-        pygame.display.update()
 
     pygame.quit()
 
