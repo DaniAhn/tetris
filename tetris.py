@@ -1,5 +1,6 @@
 import pygame
 import random
+import time
 
 # Default dimensions of the game window
 SCR_WIDTH = 800
@@ -13,6 +14,9 @@ TL_X = (SCR_WIDTH - PLAY_WIDTH) // 2
 TL_Y = SCR_HEIGHT - PLAY_HEIGHT - 10
 # Size of a single tile
 BLOCK_SIZE = 30
+
+INPUT_DEL = 0.075
+FALL_DEL = 0.025
 
 # Tetris pieces represented as lists of 2D arrays with rotations
 S = [['.....',
@@ -161,15 +165,18 @@ class Piece:
 
     def move_rgt(self):
         self.x += 1
+        if not valid_space(self, grid):
+            self.x -= 1
     
     def move_lft(self):
         self.x -= 1
+        if not valid_space(self, grid):
+            self.x += 1
     
     def move_down(self):
         self.y += 1
-
-    def move_up(self):
-        self.y -= 1
+        if not valid_space(self, grid):
+            self.y -= 1
 
 def main():
     """
@@ -241,6 +248,8 @@ def game_loop(win):
     fall_time = 0
     fall_speed = 0.27
 
+    last_key_press = {pygame.K_LEFT: 0, pygame.K_RIGHT: 0, pygame.K_DOWN: 0}
+
     while run:
         grid = create_grid(locked)
 
@@ -254,31 +263,35 @@ def game_loop(win):
                 curr_piece.y -= 1
                 change_piece = True
 
+        keys = pygame.key.get_pressed()   
+        curr_time = time.time()
+                     
+        if keys[pygame.K_LEFT]:
+            if curr_time - last_key_press[pygame.K_LEFT] > INPUT_DEL:
+                curr_piece.move_lft()
+                last_key_press[pygame.K_LEFT] = curr_time
+
+        if keys[pygame.K_RIGHT]:
+            if curr_time - last_key_press[pygame.K_RIGHT] > INPUT_DEL:
+                curr_piece.move_rgt()
+                last_key_press[pygame.K_RIGHT] = curr_time
+
+        if keys[pygame.K_DOWN]:
+            if curr_time - last_key_press[pygame.K_DOWN] > FALL_DEL:
+                curr_piece.move_down()
+                last_key_press[pygame.K_DOWN] = curr_time
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
                 pygame.display.quit()
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
-                    curr_piece.move_lft()
-                    if not valid_space(curr_piece, grid):
-                        curr_piece.move_rgt()
-
-                if event.key == pygame.K_RIGHT:
-                    curr_piece.move_rgt()
-                    if not valid_space(curr_piece, grid):
-                        curr_piece.move_lft()
-
-                if event.key == pygame.K_DOWN:
-                    curr_piece.move_down()
-                    if not valid_space(curr_piece, grid):
-                        curr_piece.move_up()
 
                 if event.key == pygame.K_UP:
                     curr_piece.rotate_cw()
-                    if not valid_space(curr_piece, grid):
-                        curr_piece.rotate_ccw()
+                if not valid_space(curr_piece, grid):
+                    curr_piece.rotate_ccw()
 
                 if event.key == pygame.K_z:
                     curr_piece.rotate_ccw()
