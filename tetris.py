@@ -193,13 +193,6 @@ def create_grid(locked={}):
 
 def draw_grid(surface, grid):
     for row in range(len(grid)):
-        for col in range(len(grid[row])):
-            pygame.draw.rect(surface, grid[row][col], 
-                             (TL_X + col * BLOCK_SIZE,
-                              TL_Y + row * BLOCK_SIZE,
-                              BLOCK_SIZE, BLOCK_SIZE))
-    
-    for row in range(len(grid)):
         pygame.draw.line(surface, (32,32,32), 
                          (TL_X, TL_Y + row * BLOCK_SIZE),
                          (TL_X + PLAY_WIDTH, TL_Y + row * BLOCK_SIZE))
@@ -219,14 +212,16 @@ def draw_window(surface, grid):
     label = font.render("TETRIS", True, (255,255,255))
 
     surface.blit(label, (TL_X + PLAY_WIDTH / 2 - (label.get_width() / 2), 20))
+
+    for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            pygame.draw.rect(surface, grid[row][col], 
+                             (TL_X + col * BLOCK_SIZE,
+                              TL_Y + row * BLOCK_SIZE,
+                              BLOCK_SIZE, BLOCK_SIZE))
     
     draw_grid(surface, grid)
     pygame.display.update()
-
-def get_shape():
-    shape_index = random.randint(0, len(shapes))
-    shape = Piece(5, -1, shapes[shape])
-    return shape
 
 def game_loop(win):
     run = True
@@ -249,15 +244,25 @@ def game_loop(win):
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    curr_piece.move_lft()
+                    if valid_space(curr_piece, grid):
+                        curr_piece.move_lft()
+
                 if event.key == pygame.K_RIGHT:
-                    curr_piece.move_rgt()
+                    if valid_space(curr_piece, grid):
+                        curr_piece.move_rgt()
+
                 if event.key == pygame.K_DOWN:
-                    curr_piece.move_down()
+                    if valid_space(curr_piece, grid):
+                        curr_piece.move_down()
+
                 if event.key == pygame.K_UP:
-                    curr_piece.rotate_cw()
+                    if valid_space(curr_piece, grid):
+                        curr_piece.rotate_cw()
+
                 if event.key == pygame.K_z:
-                    curr_piece.rotate_ccw()
+                    if valid_space(curr_piece, grid):
+                        curr_piece.rotate_ccw()
+                        
                 if event.key == pygame.K_c:
                     pass
                 if event.key == pygame.K_SPACE:
@@ -266,6 +271,35 @@ def game_loop(win):
         draw_window(win, grid)
 
     pygame.quit()
+
+def get_shape():
+    shape_index = random.randint(0, len(shapes) - 1)
+    shape = Piece(5, 0, shapes[shape_index])
+    return shape
+
+def valid_space(shape, grid):
+    accepted_pos = [[(j, i) for j in range(10)] for i in range(20)]
+    accepted_pos = [j for sub in accepted_pos for j in sub]
+
+    formatted = convert_shape_format(shape)
+
+    for pos in formatted:
+        if pos not in accepted_pos:
+            if pos[1] > -1:
+                return False    
+    return True
+
+def convert_shape_format(shape):
+    positions = []
+    shape_format = shape.shape[shape.rotation]
+    for i, line in enumerate(shape_format):
+        row = list(line)
+        for j, col in enumerate(row):
+            if col == "0":
+                positions.append(shape.x + j, shape.y + i)
+
+    for i, pos in enumerate(positions):
+        positions[i] = (pos[0] - 2, pos[1] - 4)
 
 if __name__ == "__main__":
     main()
