@@ -14,8 +14,6 @@ TL_Y = SCR_HEIGHT - PLAY_HEIGHT - 10
 # Size of a single tile
 BLOCK_SIZE = 30
 
-FPS = 60
-
 # Tetris pieces represented as lists of 2D arrays with rotations
 S = [['.....',
       '.....',
@@ -123,13 +121,13 @@ T = [['.....',
 shapes = [S, Z, I, O, J, L, T]
 # Colours corresponding to each shape in the list order
 shape_colours = [
-    (0, 255, 0),
-    (255, 0, 0),
-    (0, 255, 255),
-    (255, 255, 0),
-    (255, 165, 0), 
-    (0, 0, 255), 
-    (128, 0, 128)
+    (12, 255, 12),
+    (255, 12, 12),
+    (12, 255, 255),
+    (255, 255, 12),
+    (12, 12, 255), 
+    (255, 128, 12), 
+    (255, 12, 255)
 ]
 
 class Piece:
@@ -168,7 +166,10 @@ class Piece:
         self.x -= 1
     
     def move_down(self):
-        self.y + 1
+        self.y += 1
+
+    def move_up(self):
+        self.y -= 1
 
 def main():
     """
@@ -193,6 +194,13 @@ def create_grid(locked={}):
 
 def draw_grid(surface, grid):
     for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            pygame.draw.rect(surface, grid[row][col], 
+                             (TL_X + col * BLOCK_SIZE,
+                              TL_Y + row * BLOCK_SIZE,
+                              BLOCK_SIZE, BLOCK_SIZE), 0)
+    
+    for row in range(len(grid)):
         pygame.draw.line(surface, (32,32,32), 
                          (TL_X, TL_Y + row * BLOCK_SIZE),
                          (TL_X + PLAY_WIDTH, TL_Y + row * BLOCK_SIZE))
@@ -201,9 +209,6 @@ def draw_grid(surface, grid):
                              (TL_X + col * BLOCK_SIZE, TL_Y), 
                              (TL_X + col * BLOCK_SIZE, TL_Y + PLAY_HEIGHT))
             
-    pygame.draw.rect(surface, (128,128,128), (TL_X - 5, TL_Y - 5, 
-                                              PLAY_WIDTH + 10, 
-                                              PLAY_HEIGHT + 10), 5)
 
 def draw_window(surface, grid):
     surface.fill((0,0,0))
@@ -212,13 +217,10 @@ def draw_window(surface, grid):
     label = font.render("TETRIS", True, (255,255,255))
 
     surface.blit(label, (TL_X + PLAY_WIDTH / 2 - (label.get_width() / 2), 20))
-
-    for row in range(len(grid)):
-        for col in range(len(grid[row])):
-            pygame.draw.rect(surface, grid[row][col], 
-                             (TL_X + col * BLOCK_SIZE,
-                              TL_Y + row * BLOCK_SIZE,
-                              BLOCK_SIZE, BLOCK_SIZE))
+            
+    pygame.draw.rect(surface, (128,128,128), (TL_X - 5, TL_Y - 5, 
+                                              PLAY_WIDTH + 10, 
+                                              PLAY_HEIGHT + 10), 5)
     
     draw_grid(surface, grid)
     pygame.display.update()
@@ -227,16 +229,31 @@ def game_loop(win):
     run = True
     global grid
 
+    change_piece = False
+
     locked = {}
-    grid = create_grid(locked)
 
     clock = pygame.time.Clock()
     piece_queue = [get_shape() for x in range(5)]
 
     curr_piece = get_shape()
 
+    fall_time = 0
+    fall_speed = 0.27
+
     while run:
-        clock.tick(FPS)
+        grid = create_grid(locked)
+
+        fall_time += clock.get_rawtime()
+        clock.tick()
+
+        if fall_time / 1000 > fall_speed:
+            fall_time = 0
+            curr_piece.y += 1
+            if not valid_space(curr_piece, grid) and curr_piece.y > 0:
+                curr_piece.y -= 1
+                change_piece = True
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 run = False
@@ -244,29 +261,50 @@ def game_loop(win):
 
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    if valid_space(curr_piece, grid):
-                        curr_piece.move_lft()
-
-                if event.key == pygame.K_RIGHT:
-                    if valid_space(curr_piece, grid):
+                    curr_piece.move_lft()
+                    if not valid_space(curr_piece, grid):
                         curr_piece.move_rgt()
 
+                if event.key == pygame.K_RIGHT:
+                    curr_piece.move_rgt()
+                    if not valid_space(curr_piece, grid):
+                        curr_piece.move_lft()
+
                 if event.key == pygame.K_DOWN:
-                    if valid_space(curr_piece, grid):
-                        curr_piece.move_down()
+                    curr_piece.move_down()
+                    if not valid_space(curr_piece, grid):
+                        curr_piece.move_up()
 
                 if event.key == pygame.K_UP:
-                    if valid_space(curr_piece, grid):
-                        curr_piece.rotate_cw()
+                    curr_piece.rotate_cw()
+                    if not valid_space(curr_piece, grid):
+                        curr_piece.rotate_ccw()
 
                 if event.key == pygame.K_z:
-                    if valid_space(curr_piece, grid):
-                        curr_piece.rotate_ccw()
+                    curr_piece.rotate_ccw()
+                    if not valid_space(curr_piece, grid):
+                        curr_piece.rotate_cw()
                         
                 if event.key == pygame.K_c:
                     pass
                 if event.key == pygame.K_SPACE:
                     pass
+
+        shape_pos = convert_shape_format(curr_piece)
+
+        for i in range(len(shape_pos)):
+            x, y = shape_pos[i]
+            if y > -1:
+                grid[y][x] = curr_piece.colour
+
+        if change_piece:
+            for pos in shape_pos:
+                p = (pos[0], pos[1])
+                locked[p] = curr_piece.colour
+
+            curr_piece = piece_queue.pop(0)
+            piece_queue.append(get_shape())
+            change_piece = False
 
         draw_window(win, grid)
 
@@ -278,7 +316,8 @@ def get_shape():
     return shape
 
 def valid_space(shape, grid):
-    accepted_pos = [[(j, i) for j in range(10)] for i in range(20)]
+    accepted_pos = [[(j, i) for j in range(10) if grid[i][j] == (0,0,0)] 
+                    for i in range(20)]
     accepted_pos = [j for sub in accepted_pos for j in sub]
 
     formatted = convert_shape_format(shape)
@@ -296,10 +335,20 @@ def convert_shape_format(shape):
         row = list(line)
         for j, col in enumerate(row):
             if col == "0":
-                positions.append(shape.x + j, shape.y + i)
+                positions.append((shape.x + j, shape.y + i))
 
     for i, pos in enumerate(positions):
         positions[i] = (pos[0] - 2, pos[1] - 4)
+
+    return positions
+
+def check_lost(positions):
+    for pos in positions:
+        x, y = pos
+        if y < 1:
+            return True
+        
+    return False
 
 if __name__ == "__main__":
     main()
