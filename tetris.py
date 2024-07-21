@@ -45,15 +45,15 @@ Z = [['.....',
       '.0...',
       '.....']]
 
-I = [['..0..',
-      '..0..',
-      '..0..',
-      '..0..',
-      '.....'],
-     ['.....',
+I = [['.....',
       '0000.',
       '.....',
       '.....',
+      '.....'],
+     ['..0..',
+      '..0..',
+      '..0..',
+      '..0..',
       '.....']]
 
 O = [['.....',
@@ -222,78 +222,6 @@ def main()-> None:
     pygame.display.set_caption("Tetris")
     game_loop(win)
 
-def create_grid(locked: dict[tuple[int], 
-                             tuple[int]]={})-> list[list[tuple[int]]]:
-    """
-    Creates a representation of the current tetris grid.
-    
-    Args:
-        locked (dict[tuple[int], tuple[int]]): Locked positions on the grid.
-    Returns: 
-        list[list[tuple[int]]]: Representation of the current grid.
-    """
-    # Initializes an empty grid.
-    grid = [[(0,0,0) for x in range(10)] for x in range(20)]
-
-    # Assigns the correct colours to display for each locked tile.
-    for row in range(len(grid)):
-        for col in range(len(grid[0])):
-            if (col, row) in locked:
-                c = locked[(col, row)]
-                grid[row][col] = c
-
-    return grid
-
-def draw_grid(win: pygame.Surface, grid: list[list[tuple[int]]])-> None:
-    """
-    Draws the grid onto the surface.
-
-    Args:
-        win (pygame.Surface): pygame Surface object containing the 
-        display contents.
-        grid (list[list[tuple[int]]]): Representation of the current grid.
-    """
-    # Draws each tile of the grid onto the display.
-    for row in range(len(grid)):
-        for col in range(len(grid[row])):
-            pygame.draw.rect(win, grid[row][col], 
-                             (TL_X + col * BLOCK_SIZE,
-                              TL_Y + row * BLOCK_SIZE,
-                              BLOCK_SIZE, BLOCK_SIZE), 0)
-    # Draws the grid lines for each row and column.
-    for row in range(len(grid)):
-        pygame.draw.line(win, (32,32,32), 
-                         (TL_X, TL_Y + row * BLOCK_SIZE),
-                         (TL_X + PLAY_WIDTH, TL_Y + row * BLOCK_SIZE))
-        for col in range(len(grid[row])):
-            pygame.draw.line(win, (32,32,32), 
-                             (TL_X + col * BLOCK_SIZE, TL_Y), 
-                             (TL_X + col * BLOCK_SIZE, TL_Y + PLAY_HEIGHT))
-
-def draw_window(win: pygame.Surface, grid: list[list[tuple[int]]])-> None:
-    """
-    Draws the display for the game window.
-
-    Args:
-        win (pygame.Surface): Pygame Surface object containing the 
-        display contents.
-        grid (list[list[tuple[int]]]): Representation of the current grid.
-    """
-    # Creates a blank surface.
-    win.fill((0,0,0))
-    # Displays the game title.
-    font = pygame.font.SysFont("Georgia", 60)
-    title = font.render("TETRIS", True, (255,255,255))
-    win.blit(title, (TL_X + PLAY_WIDTH / 2 - (title.get_width() / 2), 20))
-    
-    # Draws the outline for the playable grid.
-    pygame.draw.rect(win, (128,128,128), (TL_X - 5, TL_Y - 5, 
-                                              PLAY_WIDTH + 10, 
-                                              PLAY_HEIGHT + 10), 5)
-    
-    draw_grid(win, grid)
-    pygame.display.update()
-
 def game_loop(win: pygame.Surface)-> None:
     """
     Main loop of the game. Handles all game logic.
@@ -394,7 +322,7 @@ def game_loop(win: pygame.Surface)-> None:
             if y > -1:
                 grid[y][x] = curr_piece.colour
 
-        draw_window(win, grid)
+        draw_window(win, grid, piece_queue)
 
         # Ends the game upon player loss.
         if check_lost(locked):
@@ -402,6 +330,122 @@ def game_loop(win: pygame.Surface)-> None:
             pygame.display.quit()
 
     pygame.quit()
+
+def create_grid(locked: dict[tuple[int], 
+                             tuple[int]]={})-> list[list[tuple[int]]]:
+    """
+    Creates a representation of the current tetris grid.
+    
+    Args:
+        locked (dict[tuple[int], tuple[int]]): Locked positions on the grid.
+    Returns: 
+        list[list[tuple[int]]]: Representation of the current grid.
+    """
+    # Initializes an empty grid.
+    grid = [[(0,0,0) for x in range(10)] for x in range(20)]
+
+    # Assigns the correct colours to display for each locked tile.
+    for row in range(len(grid)):
+        for col in range(len(grid[0])):
+            if (col, row) in locked:
+                c = locked[(col, row)]
+                grid[row][col] = c
+
+    return grid
+
+def draw_grid(win: pygame.Surface, grid: list[list[tuple[int]]])-> None:
+    """
+    Draws the grid onto the surface.
+
+    Args:
+        win (pygame.Surface): pygame Surface object containing the 
+        display contents.
+        grid (list[list[tuple[int]]]): Representation of the current grid.
+    """
+    # Draws each tile of the grid onto the display.
+    for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            pygame.draw.rect(win, grid[row][col], 
+                             (TL_X + col * BLOCK_SIZE,
+                              TL_Y + row * BLOCK_SIZE,
+                              BLOCK_SIZE, BLOCK_SIZE), 0)
+    # Draws the grid lines for each row and column.
+    for row in range(len(grid)):
+        pygame.draw.line(win, (32,32,32), 
+                         (TL_X, TL_Y + row * BLOCK_SIZE),
+                         (TL_X + PLAY_WIDTH, TL_Y + row * BLOCK_SIZE))
+        for col in range(len(grid[row])):
+            pygame.draw.line(win, (32,32,32), 
+                             (TL_X + col * BLOCK_SIZE, TL_Y), 
+                             (TL_X + col * BLOCK_SIZE, TL_Y + PLAY_HEIGHT))
+
+def draw_window(win: pygame.Surface, grid: list[list[tuple[int]]], 
+                queue: list[Piece])-> None:
+    """
+    Draws the display for the game window.
+
+    Args:
+        win (pygame.Surface): Pygame Surface object containing the 
+        display contents.
+        grid (list[list[tuple[int]]]): Representation of the current grid.
+        queue (list[piece]): List of pieces in the current queue.
+    """
+    # Creates a blank surface.
+    win.fill((0,0,0))
+    # Displays the game title.
+    font = pygame.font.SysFont("Georgia", 60)
+    title = font.render("TETRIS", True, (255,255,255))
+    win.blit(title, (TL_X + PLAY_WIDTH / 2 - (title.get_width() / 2), 20))
+    
+    # Draws the outline for the playable grid.
+    pygame.draw.rect(win, (128,128,128),
+                     (TL_X - 5, TL_Y - 5,
+                      PLAY_WIDTH + 10, PLAY_HEIGHT + 10), 5)
+    
+    draw_grid(win, grid)
+    display_queue(win, queue)
+
+    pygame.display.update()
+
+def display_queue(win: pygame.Surface, queue: list[Piece])-> None:
+    """
+    Draws the piece queue onto the display.
+
+    Args:
+        win (pygame.Surface): Pygame Surface object containing the 
+        display contents.
+        queue (list[Piece]): List of pieces in the current queue.
+    """
+    # X position of the queue.
+    queue_pos = SCR_WIDTH - TL_X / 2
+
+    # Creates the queue label.
+    font = pygame.font.SysFont("Georgia", 30)
+    label = font.render("NEXT:", True, (255,255,255))
+
+    win.blit(label, (queue_pos - label.get_width() / 2, 30))
+
+    # Variable to maintain spacing uniformity.
+    spacing = 1
+
+    # Draws the pieces in the queue onto the screen.
+    for shape in queue:
+        format = shape.shape[shape.rotation]
+        # Adds spacing of one tile between each piece.
+        spacing += 1
+        for j, line in enumerate(format):
+            row = list(line)
+            blank_row = True
+            for k, col in enumerate(row):
+                if col == "0":
+                    pygame.draw.rect(win, shape.colour, 
+                                     (queue_pos - len(row) * BLOCK_SIZE / 2 + k * BLOCK_SIZE,
+                                      30 + spacing * BLOCK_SIZE, 
+                                      BLOCK_SIZE, BLOCK_SIZE), 0)
+                    blank_row = False
+            # Increases spacing if current row is not a blank row.
+            if blank_row == False:
+                spacing += 1         
 
 def get_shape()-> Piece:
     """
@@ -457,11 +501,11 @@ def convert_shape_format(shape: Piece)-> list[tuple[int]]:
         list[tuple[int]]: List containing tuples of tile coordinates.
     """
     # Gets the 2D array representation of the current shape and rotation.
-    shape_format = shape.shape[shape.rotation]
+    format = shape.shape[shape.rotation]
 
     # Adds coordinates of each current tile to a list of tile positions.
     positions = []
-    for i, line in enumerate(shape_format):
+    for i, line in enumerate(format):
         row = list(line)
         for j, col in enumerate(row):
             if col == "0":
@@ -475,7 +519,7 @@ def convert_shape_format(shape: Piece)-> list[tuple[int]]:
 
 def change_piece(curr_piece: Piece, shape_pos: list[tuple[int]], 
                  locked: dict[tuple[int], tuple[int]], 
-                 piece_queue: list[Piece])-> tuple[Piece, list[Piece]]:
+                 queue: list[Piece])-> tuple[Piece, list[Piece]]:
     """
     Locks the current Tetris piece on the grid and moves on to the next piece.
 
@@ -483,7 +527,7 @@ def change_piece(curr_piece: Piece, shape_pos: list[tuple[int]],
         curr_piece (Piece): Current Tetris piece.
         shape_pos (list[tuple[int]]): Tile coordinates of the current piece.
         locked (dict[tuple[int], tuple[int]]): Locked positions on the grid.
-        piece_queue (list[Piece]): List of pieces in the current queue.
+        queue (list[Piece]): List of pieces in the current queue.
     """
     # Locks each tile in the current piece to the grid.
     for pos in shape_pos:
@@ -491,10 +535,10 @@ def change_piece(curr_piece: Piece, shape_pos: list[tuple[int]],
         locked[p] = curr_piece.colour
 
     # Moves onto the next piece and adds a new one to the queue.
-    curr_piece = piece_queue.pop(0)
-    piece_queue.append(get_shape())
+    curr_piece = queue.pop(0)
+    queue.append(get_shape())
 
-    return curr_piece, piece_queue
+    return curr_piece, queue
 
 def check_lost(locked: dict[tuple[int], tuple[int]])-> bool:
     """
