@@ -19,7 +19,7 @@ BLOCK_SIZE = 30
 FALL_SPD = 0.27
 
 # Input delay for left/right movement and fall speed while holding DOWN key
-INPUT_DEL = 0.1
+INPUT_DEL = 0.08
 FALL_DEL = 0.025
 
 # Tetris pieces represented as lists of 2D arrays with rotations
@@ -242,13 +242,15 @@ def game_loop(win: pygame.Surface)-> None:
     piece_queue = [get_shape() for x in range(5)]
     curr_piece = get_shape()
 
+    # Determines if the current piece is locked.
+    locked_piece = False
+
     # Tracks the time elapsed since the last tile the piece has fallen.
     fall_time = 0
     # Tracks the time of the last key press for each key.
     last_key_press = {pygame.K_LEFT: 0, pygame.K_RIGHT: 0, pygame.K_DOWN: 0}
 
     while run:
-
         clock.tick()
         grid = create_grid(locked)
 
@@ -264,9 +266,8 @@ def game_loop(win: pygame.Surface)-> None:
             # Changes piece if the tile below the current piece is locked.
             if not valid_space(curr_piece, grid) and curr_piece.y > 0:
                 curr_piece.y -= 1
-                curr_piece, piece_queue = change_piece(curr_piece, shape_pos,
-                                                       locked, piece_queue)
-                
+                locked_piece = True
+                                
         # Handles real-time player movement and delays.
         keys = pygame.key.get_pressed()
         curr_time = time.time()
@@ -322,7 +323,14 @@ def game_loop(win: pygame.Surface)-> None:
             if y > -1:
                 grid[y][x] = curr_piece.colour
 
+        if locked_piece:
+            curr_piece = change_piece(curr_piece, shape_pos, 
+                                      locked, piece_queue)
+            rows_cleared = clear_rows(grid, locked)
+            locked_piece = False
+
         draw_window(win, grid, piece_queue)
+        pygame.display.update
 
         # Ends the game upon player loss.
         if check_lost(locked):
@@ -348,8 +356,8 @@ def create_grid(locked: dict[tuple[int],
     for row in range(len(grid)):
         for col in range(len(grid[0])):
             if (col, row) in locked:
-                c = locked[(col, row)]
-                grid[row][col] = c
+                tile = locked[(col, row)]
+                grid[row][col] = tile
 
     return grid
 
@@ -362,13 +370,7 @@ def draw_grid(win: pygame.Surface, grid: list[list[tuple[int]]])-> None:
         display contents.
         grid (list[list[tuple[int]]]): Representation of the current grid.
     """
-    # Draws each tile of the grid onto the display.
-    for row in range(len(grid)):
-        for col in range(len(grid[row])):
-            pygame.draw.rect(win, grid[row][col], 
-                             (TL_X + col * BLOCK_SIZE,
-                              TL_Y + row * BLOCK_SIZE,
-                              BLOCK_SIZE, BLOCK_SIZE), 0)
+
     # Draws the grid lines for each row and column.
     for row in range(len(grid)):
         pygame.draw.line(win, (32,32,32), 
@@ -396,6 +398,14 @@ def draw_window(win: pygame.Surface, grid: list[list[tuple[int]]],
     font = pygame.font.SysFont("Georgia", 60)
     title = font.render("TETRIS", True, (255,255,255))
     win.blit(title, (TL_X + PLAY_WIDTH / 2 - (title.get_width() / 2), 20))
+
+    # Draws each tile of the grid onto the display.
+    for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            pygame.draw.rect(win, grid[row][col], 
+                             (TL_X + col * BLOCK_SIZE,
+                              TL_Y + row * BLOCK_SIZE,
+                              BLOCK_SIZE, BLOCK_SIZE), 0)
     
     # Draws the outline for the playable grid.
     pygame.draw.rect(win, (128,128,128),
@@ -423,7 +433,7 @@ def display_queue(win: pygame.Surface, queue: list[Piece])-> None:
     font = pygame.font.SysFont("Georgia", 30)
     label = font.render("NEXT:", True, (255,255,255))
 
-    win.blit(label, (queue_pos - label.get_width() / 2, 30))
+    win.blit(label, (queue_pos - label.get_width() / 2, TL_Y))
 
     # Variable to maintain spacing uniformity.
     spacing = 1
@@ -439,8 +449,9 @@ def display_queue(win: pygame.Surface, queue: list[Piece])-> None:
             for k, col in enumerate(row):
                 if col == "0":
                     pygame.draw.rect(win, shape.colour, 
-                                     (queue_pos - len(row) * BLOCK_SIZE / 2 + k * BLOCK_SIZE,
-                                      30 + spacing * BLOCK_SIZE, 
+                                     (queue_pos - len(row) * BLOCK_SIZE / 2 
+                                      + k * BLOCK_SIZE,
+                                      TL_Y + spacing * BLOCK_SIZE, 
                                       BLOCK_SIZE, BLOCK_SIZE), 0)
                     blank_row = False
             # Increases spacing if current row is not a blank row.
@@ -519,7 +530,7 @@ def convert_shape_format(shape: Piece)-> list[tuple[int]]:
 
 def change_piece(curr_piece: Piece, shape_pos: list[tuple[int]], 
                  locked: dict[tuple[int], tuple[int]], 
-                 queue: list[Piece])-> tuple[Piece, list[Piece]]:
+                 queue: list[Piece])-> Piece:
     """
     Locks the current Tetris piece on the grid and moves on to the next piece.
 
@@ -528,6 +539,8 @@ def change_piece(curr_piece: Piece, shape_pos: list[tuple[int]],
         shape_pos (list[tuple[int]]): Tile coordinates of the current piece.
         locked (dict[tuple[int], tuple[int]]): Locked positions on the grid.
         queue (list[Piece]): List of pieces in the current queue.
+    Returns:
+        Piece: The new current Tetris piece.
     """
     # Locks each tile in the current piece to the grid.
     for pos in shape_pos:
@@ -538,7 +551,44 @@ def change_piece(curr_piece: Piece, shape_pos: list[tuple[int]],
     curr_piece = queue.pop(0)
     queue.append(get_shape())
 
-    return curr_piece, queue
+    return curr_piece
+
+def clear_rows(grid: list[list[tuple[int]]], 
+               locked: dict[tuple[int], tuple[int]])-> int:
+    """
+    Clears lines that have been filled.
+
+    Args:
+        grid (list[list[tuple[int]]]): Representation of the current grid.
+        locked (dict[tuple[int], tuple[int]]): Locked positions on the grid.
+    Returns:
+        int: Number of lines cleared.
+    """
+    lines_cleared = []
+
+    # Tracks which lines have been filled and adds them to lines_cleared.
+    for row in range(len(grid)):
+        if (0,0,0) not in grid[row]:
+            lines_cleared.append(row)
+
+    # Deletes cleared lines from locked positions.
+    for line in lines_cleared:
+        for col in range(len(grid[0])):
+            try:
+                del locked[(col, line)]
+            except KeyError:
+                continue
+
+    # Moves down each row above the cleared lines.
+    for line in lines_cleared:
+        for row in range(line, -1, -1):
+            for col in range(len(grid[0])):
+                if (col, row - 1) in locked.keys():
+                    new_tile = locked[(col, row - 1)]
+                    locked[(col, row)] = new_tile
+                    del locked[col, row - 1]
+        
+    return len(lines_cleared)               
 
 def check_lost(locked: dict[tuple[int], tuple[int]])-> bool:
     """
