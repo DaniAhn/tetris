@@ -22,6 +22,12 @@ FALL_SPD = 0.27
 INPUT_DEL = 0.08
 FALL_DEL = 0.025
 
+# Point bonuses awarded based on lines cleared
+SGL_PTS = 100
+DBL_PTS = 300
+TRP_PTS = 500
+TTS_PTS = 800
+
 # Tetris pieces represented as lists of 2D arrays with rotations
 S = [['.....',
       '.....',
@@ -220,6 +226,7 @@ def main()-> None:
     pygame.font.init()
     # Sets the caption for the game window.
     pygame.display.set_caption("Tetris")
+    
     game_loop(win)
 
 def game_loop(win: pygame.Surface)-> None:
@@ -232,6 +239,7 @@ def game_loop(win: pygame.Surface)-> None:
     """
     run = True
     clock = pygame.time.Clock()
+    score = 0
 
     # Global representation of the current grid.
     global grid
@@ -327,9 +335,19 @@ def game_loop(win: pygame.Surface)-> None:
             curr_piece = change_piece(curr_piece, shape_pos, 
                                       locked, piece_queue)
             rows_cleared = clear_rows(grid, locked)
+            # Awards points based on number of lines cleared
+            if rows_cleared == 1:
+                score += SGL_PTS
+            elif rows_cleared == 2:
+                score += DBL_PTS
+            elif rows_cleared == 3:
+                score += TRP_PTS
+            elif rows_cleared == 4:
+                score += TTS_PTS
+
             locked_piece = False
 
-        draw_window(win, grid, piece_queue)
+        draw_window(win, grid, piece_queue, score)
         pygame.display.update
 
         # Ends the game upon player loss.
@@ -382,7 +400,7 @@ def draw_grid(win: pygame.Surface, grid: list[list[tuple[int]]])-> None:
                              (TL_X + col * BLOCK_SIZE, TL_Y + PLAY_HEIGHT))
 
 def draw_window(win: pygame.Surface, grid: list[list[tuple[int]]], 
-                queue: list[Piece])-> None:
+                queue: list[Piece], score: int=0)-> None:
     """
     Draws the display for the game window.
 
@@ -391,13 +409,20 @@ def draw_window(win: pygame.Surface, grid: list[list[tuple[int]]],
         display contents.
         grid (list[list[tuple[int]]]): Representation of the current grid.
         queue (list[piece]): List of pieces in the current queue.
+        score (int): Current score.
     """
     # Creates a blank surface.
     win.fill((0,0,0))
+
     # Displays the game title.
-    font = pygame.font.SysFont("Georgia", 60)
-    title = font.render("TETRIS", True, (255,255,255))
+    title_font = pygame.font.SysFont("Georgia", 60)
+    title = title_font.render("TETRIS", True, (255,255,255))
     win.blit(title, (TL_X + PLAY_WIDTH / 2 - (title.get_width() / 2), 20))
+
+    # Displays the current score.
+    score_font = pygame.font.SysFont("Georgia", 30)
+    score_label = score_font.render(f"SCORE: {score}", True, (255,255,255))
+    win.blit(score_label, (TL_X - TL_X / 2 - score_label.get_width() / 2, TL_Y))
 
     # Draws each tile of the grid onto the display.
     for row in range(len(grid)):
@@ -430,10 +455,9 @@ def display_queue(win: pygame.Surface, queue: list[Piece])-> None:
     queue_pos = SCR_WIDTH - TL_X / 2
 
     # Creates the queue label.
-    font = pygame.font.SysFont("Georgia", 30)
-    label = font.render("NEXT:", True, (255,255,255))
-
-    win.blit(label, (queue_pos - label.get_width() / 2, TL_Y))
+    queue_font = pygame.font.SysFont("Georgia", 30)
+    queue_label = queue_font.render("NEXT:", True, (255,255,255))
+    win.blit(queue_label, (queue_pos - queue_label.get_width() / 2, TL_Y))
 
     # Variable to maintain spacing uniformity.
     spacing = 1
