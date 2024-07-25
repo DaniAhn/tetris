@@ -226,8 +226,33 @@ def main()-> None:
     pygame.font.init()
     # Sets the caption for the game window.
     pygame.display.set_caption("Tetris")
-    
-    game_loop(win)
+
+    run = True
+
+    while run:
+        win.fill((0,0,0))
+
+        # Displays the game title.
+        title_font = pygame.font.SysFont("Georgia", 60)
+        title = title_font.render("TETRIS", True, (255,255,255))
+        win.blit(title, (TL_X + PLAY_WIDTH / 2 - (title.get_width() / 2), 20))
+
+        # Displays the main menu text.
+        label_font = pygame.font.SysFont("Georgia", 30, bold=True)
+        label = label_font.render('Press Any Key To Play!', True, (255,255,255))
+        win.blit(label, (TL_X + PLAY_WIDTH / 2 - (label.get_width() / 2), 
+                         600 - label.get_height()/2))
+        
+        pygame.display.update()
+
+        # Begins the game loop once any key is pressed.
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            if event.type == pygame.KEYDOWN:
+                game_loop(win)
+
+    pygame.display.quit()
 
 def game_loop(win: pygame.Surface)-> None:
     """
@@ -319,9 +344,7 @@ def game_loop(win: pygame.Surface)-> None:
                     curr_piece.rotate_ccw()
                     if not valid_space(curr_piece, grid):
                         curr_piece.rotate_cw()
-                        
-                if event.key == pygame.K_c:
-                    pass
+
                 if event.key == pygame.K_SPACE:
                     pass
 
@@ -353,12 +376,12 @@ def game_loop(win: pygame.Surface)-> None:
         # Ends the game upon player loss.
         if check_lost(locked):
             run = False
-            pygame.display.quit()
+            game_over(win, score)
 
     pygame.quit()
 
-def create_grid(locked: dict[tuple[int], 
-                             tuple[int]]={})-> list[list[tuple[int]]]:
+def create_grid(locked: dict[tuple[int], tuple[int]]={}
+                )-> list[list[tuple[int]]]:
     """
     Creates a representation of the current tetris grid.
     
@@ -411,7 +434,6 @@ def draw_window(win: pygame.Surface, grid: list[list[tuple[int]]],
         queue (list[piece]): List of pieces in the current queue.
         score (int): Current score.
     """
-    # Creates a blank surface.
     win.fill((0,0,0))
 
     # Displays the game title.
@@ -514,13 +536,13 @@ def valid_space(shape: Piece, grid: list[list[tuple[int]]])-> bool:
     
     # Determines if any tile in the current shape overlaps with a locked tile.
     for pos in formatted:
-        x, y = pos
+        col, row = pos
         if pos not in accepted_pos:
             # Bypasses check if shape is in the starting position.
-            if y > -1:
+            if row > -1:
                 return False
             # Determines if the tile is outside the boundary of the edges.
-            elif x < 0 or x > 9:
+            elif col < 0 or col > 9:
                 return False
             
     return True
@@ -625,11 +647,56 @@ def check_lost(locked: dict[tuple[int], tuple[int]])-> bool:
     """
     # Returns True if any locked piece exceeds the top boundary of the grid.
     for pos in locked:
-        x, y = pos
-        if y < 0:
+        col, row = pos
+        if row < 0:
             return True
-        
     return False
+
+def game_over(win: pygame.Surface, score: int)-> None:
+    """
+    Displays the game over screen.
+
+    Args:
+        win (pygame.Surface): Pygame Surface object containing the 
+        display contents.
+        score (int): Final score of the game.
+    """
+    run = True
+    while run:
+        win.fill((0,0,0))
+
+        # Displays the title text.
+        title_font = pygame.font.SysFont("Georgia", 60)
+        title = title_font.render("TETRIS", True, (255,255,255))
+        win.blit(title, (TL_X + PLAY_WIDTH / 2 - (title.get_width() / 2), 20))
+
+        # Displays the game over message.
+        game_over_font = title_font = pygame.font.SysFont("Georgia", 30, bold=True)
+        game_over_label = game_over_font.render("GAME OVER!", True, (255,255,255))
+        win.blit(game_over_label, (TL_X + PLAY_WIDTH / 2 - 
+                                   (game_over_label.get_width()/2), 300))
+
+        # Displays the final score.
+        score_font = pygame.font.SysFont("Georgia", 30)
+        score_label = score_font.render(f"SCORE: {score}", True, (255,255,255))
+        win.blit(score_label, (TL_X - TL_X / 2 - score_label.get_width() / 2, TL_Y))
+
+        # Displays the menu text.
+        label_font = pygame.font.SysFont("Georgia", 30, bold=True)
+        label = label_font.render('Press Any Key To Try Again', True, (255,255,255))
+        win.blit(label, (TL_X + PLAY_WIDTH / 2 - (label.get_width() / 2), 
+                         600 - label.get_height()/2))
+        
+        pygame.display.update()
+
+        # Restarts the game loop upon any key press.
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+            if event.type == pygame.KEYDOWN:
+                game_loop(win)
+
+    pygame.display.quit()
 
 if __name__ == "__main__":
     main()
