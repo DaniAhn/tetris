@@ -345,9 +345,6 @@ def game_loop(win: pygame.Surface)-> None:
                     if not valid_space(curr_piece, grid):
                         curr_piece.rotate_cw()
 
-                if event.key == pygame.K_SPACE:
-                    pass
-
         # Updates grid with the position of the current piece.
         for i in range(len(shape_pos)):
             x, y = shape_pos[i]
@@ -358,6 +355,7 @@ def game_loop(win: pygame.Surface)-> None:
             curr_piece = change_piece(curr_piece, shape_pos, 
                                       locked, piece_queue)
             rows_cleared = clear_rows(grid, locked)
+            
             # Awards points based on number of lines cleared
             if rows_cleared == 1:
                 score += SGL_PTS
