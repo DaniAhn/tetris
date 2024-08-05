@@ -2,7 +2,7 @@
  A playable game of Tetris in python.
 ## Getting Started
 ### Installation
-- Make sure you have python installed. Install the required library using pip by running the following command in the terminal:
+Make sure you have python installed. Install the required library using pip by running the following command in the terminal:
 ```
 pip install pygame
 ```
