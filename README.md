@@ -10,7 +10,7 @@ pip install pygame
 ### Usage
 Navigate to the project directory and run the following command in the terminal to open the game window:
 ```
-python wpm-test.py
+python tetris.py
 ```
 Navigate the main menu to begin running the game.
 
